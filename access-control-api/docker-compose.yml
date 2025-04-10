@@ -1,0 +1,51 @@
+services:
+  access-control: 
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    command: rails s -b 0.0.0.0 
+    volumes:
+      - .:/usr/src
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+
+  sidekiq:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    command: sidekiq
+    volumes:
+      - .:/usr/src
+    ports:
+      - "3001:3001"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis:/data
+
+  db:
+    image: postgres:11.5
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT}:5432"
+
+volumes:
+  postgres:
+  redis:
