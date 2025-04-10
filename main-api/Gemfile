@@ -47,3 +47,6 @@ group :development, :test do
 end
 
 gem 'bcrypt'
+
+# Для HTTP запросов
+gem 'faraday'
