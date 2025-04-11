@@ -10,17 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_04_11_113838) do
+ActiveRecord::Schema[7.1].define(version: 2025_04_11_120403) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
-
-  create_table "blocked_tickets", force: :cascade do |t|
-    t.bigint "ticket_id", null: false
-    t.string "document_number", limit: 50
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["ticket_id"], name: "index_blocked_tickets_on_ticket_id"
-  end
 
   create_table "bookings", force: :cascade do |t|
     t.bigint "ticket_id", null: false
@@ -52,7 +44,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_04_11_113838) do
     t.datetime "updated_at", null: false
   end
 
-  add_foreign_key "blocked_tickets", "tickets"
   add_foreign_key "bookings", "tickets"
   add_foreign_key "purchases", "tickets"
 end
