@@ -6,11 +6,11 @@ services:
     volumes:
       - .:/usr/src
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgres://user:password@db:5432/main_api
+      DATABASE_URL: postgres://user:password@db:5432/ticket_api_development
 
   db:
     image: postgres:11.5
@@ -18,7 +18,7 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - postgres_ticket:/var/lib/postgresql/data
 
 volumes:
-  postgres:
+  postgres_ticket:
