@@ -1,5 +1,7 @@
+require_relative '../app/api/v1/access_logs'
+
 Rails.application.routes.draw do
-  mount API::Base => '/'
+  mount API::V1::AccessLogs => '/api/v1'
   mount Sidekiq::Web => '/sidekiq' if Rails.env.development?
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
