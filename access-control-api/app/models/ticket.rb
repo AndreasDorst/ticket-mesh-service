@@ -3,5 +3,5 @@ class Ticket < ApplicationRecord
 
   validates :external_id, presence: true, uniqueness: true
   validates :document_number, presence: true
-  validates :category, inclusion: { in: %w[vip base] }
+  validates :category, inclusion: { in: %w[vip base] }, allow_nil: true
 end

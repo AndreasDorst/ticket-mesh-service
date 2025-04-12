@@ -1,8 +1,11 @@
 module API
   class Base < Grape::API
     format :json
-    prefix :api
 
-    mount API::V1::AccessLogs
+    mount API::AccessLogs
+
+    rescue_from :all do |e|
+      error!({ error: e.message }, 500)
+    end
   end
 end
