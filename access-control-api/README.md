@@ -10,23 +10,28 @@
 - Redis (для Sidekiq)
 - Доступ к сервису билетов
 
+## API Endpoints
+
 ```
-http://localhost:3000/api/v1
+http://localhost:3000/api/
 ```
 
-Метод	Путь	        Описание	      Параметры
-POST	/access/entry	Попытка входа	  ticket_id, document_number
-POST	/access/exit	Попытка выхода	ticket_id
+| Метод | Путь             | Описание        | Параметры                    |
+|-------|------------------|-----------------|------------------------------|
+| POST  | /api/access/entry| Попытка входа   | ticket_id, document_number  |
+| POST  | /api/access/exit | Попытка выхода  | ticket_id                   |
 
-POST /access/entry
+### POST /api/access/entry
 
 1. Поиск билета по external_id
-2. Проверка последней записи доступа
-3. Валидация повторного входа
-4. Проверка во внешнем сервисе
+2. Если билет не найден:
+   - Проверка во внешнем сервисе билетов
+   - Создание нового билета при успешной валидации
+3. Проверка последней записи доступа
+4. Валидация повторного входа
 5. Создание записи входа
 
-POST /access/exit
+### POST /api/access/exit
 
 1. Поиск билета по external_id
 2. Проверка последней записи доступа
@@ -35,12 +40,10 @@ POST /access/exit
 
 ## Использование API
 
-1. Попытка входа
+### Попытка входа
 
-Запрос:
-
-```
-curl -X POST http://localhost:3000/api/v1/access/entry \
+```bash
+curl -X POST http://localhost:3000/api/access/entry \
   -H "Content-Type: application/json" \
   -d '{
     "ticket_id": 123,
@@ -49,23 +52,43 @@ curl -X POST http://localhost:3000/api/v1/access/entry \
 ```
 
 Успешный ответ (200):
-
-```
+```json
 {
   "access_granted": true,
   "log_id": 45
 }
 ```
 
-## Возможные ошибки:
+### Попытка выхода
 
-- 404: Ticket not found
-- 403: Invalid credentials
-- 409: Already inside
-- 503: Ticket service unavailable
+```bash
+curl -X POST http://localhost:3000/api/access/exit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticket_id": 123
+  }'
+```
+
+Успешный ответ (200):
+```json
+{
+  "exit_registered": true,
+  "log_id": 46
+}
+```
+
+## Возможные ошибки
+
+| Код | Описание                   | Причина                                    |
+|-----|----------------------------|--------------------------------------------| 
+| 404 | Ticket not found           | Билет не найден                            |
+| 403 | Invalid credentials        | Неверные учетные данные                    |
+| 409 | Already inside             | Попытка повторного входа                   |
+| 409 | Not inside                 | Попытка выхода без предварительного входа  |
+| 503 | Ticket service unavailable | Сервис билетов недоступен                  |
 
 ## Запуск тестов
 
-```
-rspec spec/requests/access_logs_spec.rb
+```bash
+RAILS_ENV=test rspec ./spec/requests/access_logs_spec.rb
 ```
