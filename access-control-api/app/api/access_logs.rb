@@ -1,4 +1,8 @@
 require 'grape'
+require 'date'
+
+require_relative 'entities/ticket'
+require_relative 'entities/access_log'
 
 module API
   class AccessLogs < Grape::API
@@ -96,6 +100,32 @@ module API
         )
 
         { exit_registered: true, log_id: log.id }
+      end
+    end
+
+    resource :access_logs do
+      desc 'Get a list of access logs with filtering'
+      params do
+        optional :type, type: String, values: %w[entry exit], desc: 'Filter by entry or exit type'
+        optional :status, type: String, values: %w[entry exit fail], desc: 'Filter by status (entry, exit, fail)'
+        optional :date, type: Date, desc: 'Filter by date (YYYY-MM-DD)'
+      end
+      get do
+        logs = AccessLog.joins(:ticket)
+
+        if params[:type]
+          logs = logs.where(access_logs: { status: params[:type] })
+        end
+
+        if params[:status]
+          logs = logs.where(access_logs: { status: params[:status] })
+        end
+
+        if params[:date]
+          logs = logs.where('DATE(access_logs.check_time) = ?', params[:date])
+        end
+
+        present logs, with: Entities::AccessLog
       end
     end
   end

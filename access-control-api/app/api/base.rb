@@ -1,3 +1,5 @@
+require_relative 'access_logs'
+
 module API
   class Base < Grape::API
     format :json
