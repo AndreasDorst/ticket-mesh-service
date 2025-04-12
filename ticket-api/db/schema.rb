@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_04_11_120403) do
+ActiveRecord::Schema[7.1].define(version: 2025_04_12_133609) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -36,12 +36,13 @@ ActiveRecord::Schema[7.1].define(version: 2025_04_11_120403) do
     t.string "category"
     t.integer "status"
     t.decimal "price"
-    t.string "event"
     t.date "event_date"
     t.decimal "base_price"
     t.integer "sold_percentage"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "event_id"
+    t.index ["event_id"], name: "index_tickets_on_event_id"
   end
 
   add_foreign_key "bookings", "tickets"

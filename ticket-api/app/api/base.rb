@@ -1,3 +1,3 @@
 class Base < Grape::API
-  mount V1::Tickets
+  mount Tickets
 end
