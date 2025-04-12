@@ -2,8 +2,8 @@ class Tickets < Grape::API
   format :json
   prefix :api
 
-  resource :ticket do
-    desc 'Зарезервировать билет по event_id и категории'
+  resource :ticket do    
+    desc 'Book ticket by event_id and category'
     params do
       requires :event_id, type: Integer
       requires :category, type: String
@@ -13,12 +13,12 @@ class Tickets < Grape::API
         # Ищем подходящий доступный билет
         ticket = Ticket.available_for_booking(params[:event_id], params[:category]).first
   
-        error!({ error: 'Нет доступных билетов' }, 404) unless ticket
+        error!({ error: 'No available tickets' }, 404) unless ticket
   
         if ticket.booking&.expired?
           ticket.booking.destroy!
         elsif ticket.booking.present?
-          error!({ error: 'Билет уже забронирован' }, 400)
+          error!({ error: 'Ticket was already booked' }, 400)
         end
 
         time_to_book = 5.minutes.from_now
@@ -52,28 +52,53 @@ class Tickets < Grape::API
       {
         document_number: purchase.user_document,
         event_id: ticket.event_id,
-        full_name: "Иванов Иван Иванович",
+        full_name: purchase.full_name,
         category: ticket.category,
         status: ticket.status
       }
     end
 
-    desc 'Отменить бронь билета по reservation_id'
-    params do
-      requires :id, type: Integer, desc: 'Reservation ID'
-    end
-    delete 'book/:id' do
-      booking = Booking.find_by(id: params[:id])
+    desc 'Cancel booking by reservation_id'
+      params do
+        requires :id, type: Integer, desc: 'Reservation ID'
+      end
+      delete 'book/:id' do
+        booking = Booking.find_by(id: params[:id])
 
-      error!({ error: 'Бронь не найдена' }, 404) unless booking
+        error!({ error: 'Booking not found' }, 404) unless booking
 
-      if booking.expired?
-        error!({ error: 'Бронь уже истекла' }, 400)
+        if booking.expired?
+          error!({ error: 'Booking already expired' }, 400)
+        end
+
+        booking.destroy!
+
+        { status: 'cancelled' }
       end
 
-      booking.destroy!
-
-      { status: 'cancelled' }
-    end
+      desc 'Block ticket for violation (ban)'
+      params do
+        requires :ticket_id, type: Integer, desc: 'Ticket ID'
+        requires :document_number, type: String, desc: 'Violator\'s document'
+      end
+      post :block do
+        ticket = Ticket.find_by(id: params[:ticket_id])
+      
+        error!({ error: 'Ticket not found' }, 404) unless ticket
+        purchase = ticket.purchase
+        error!('Purchase not found', 404) unless purchase
+      
+        if purchase.user_document != params[:document_number]
+          error!({ error: 'Document does not match ticket holder' }, 403)
+        end
+      
+        if ticket.blocked?
+          error!({ error: 'Ticket already blocked' }, 400)
+        end
+      
+        ticket.blocked!
+      
+        { blocked: true }
+      end
   end
 end
