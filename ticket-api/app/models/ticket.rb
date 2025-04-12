@@ -13,6 +13,7 @@ class Ticket < ApplicationRecord
   validates :category, presence: true, inclusion: { in: categories.keys }
 
   has_one :booking, dependent: :destroy # Один билет может иметь только одну бронь
+  has_one :purchase
 
   # Скоуп для поиска билетов, которые доступны для бронирования
   scope :available_for_booking, ->(event_id, category) {

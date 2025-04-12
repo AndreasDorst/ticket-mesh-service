@@ -10,14 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_04_12_133609) do
+ActiveRecord::Schema[7.1].define(version: 2025_04_12_185439) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
   create_table "bookings", force: :cascade do |t|
     t.bigint "ticket_id", null: false
     t.datetime "expires_at", precision: nil
-    t.string "user_document", limit: 50
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["ticket_id"], name: "index_bookings_on_ticket_id"
@@ -29,6 +28,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_04_12_133609) do
     t.datetime "timestamp", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "user_document", limit: 50
+    t.string "full_name", limit: 100
     t.index ["ticket_id"], name: "index_purchases_on_ticket_id"
   end
 
