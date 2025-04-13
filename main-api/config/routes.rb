@@ -13,5 +13,5 @@ Rails.application.routes.draw do
   post '/auth/login', to: 'users#login'
   post '/auth/logout', to: 'users#logout'
   
-  post "/events/create"
+  post "/events", to: 'events#create'
 end
