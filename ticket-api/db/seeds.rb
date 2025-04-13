@@ -11,11 +11,9 @@ Ticket.destroy_all
   Ticket.create!(
     category: :base,
     status: :available,
-    price: 2000,
     event_id: i % 2,
     event_date: Date.today + (i % 5).days,
-    base_price: 1800,
-    sold_percentage: 0
+    base_price: 1000,
   )
 end
 
@@ -23,11 +21,9 @@ end
   Ticket.create!(
     category: :vip,
     status: :available,
-    price: 4000,
     event_id: i % 2,
     event_date: Date.today + (i % 5).days,
-    base_price: 3500,
-    sold_percentage: 0
+    base_price: 2000,
   )
 end
 
@@ -35,11 +31,9 @@ end
 Ticket.create!(
   category: :vip,
   status: :sold,
-  price: 4500,
   event_id: 1,
   event_date: Date.today + 2.days,
   base_price: 3500,
-  sold_percentage: 0
 )
 
 puts "Seeding purchases..."
@@ -62,6 +56,18 @@ purchased_tickets.each do |ticket|
   )
 
   puts "✓ Ticket ##{ticket.id} sold to #{full_name} (#{document}), user_id: #{user_id}"
+end
+
+
+puts "Seeding unsold tickets..."
+10.times do |i|
+  Ticket.create!(
+    category: :base,
+    status: :available,
+    event_id: 2,
+    event_date: Date.today + 1.days,
+    base_price: 1000,
+  )
 end
 
 puts "Done seeding!"

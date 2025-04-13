@@ -41,7 +41,6 @@ class Tickets < Grape::API
     params do
       requires :id, type: Integer, desc: 'Ticket ID'
     end
-    
     get 'info/:id' do
       ticket = Ticket.find_by(id: params[:id])
       
@@ -99,6 +98,43 @@ class Tickets < Grape::API
         ticket.blocked!
       
         { blocked: true }
+      end
+
+      desc 'Get calculated ticket price for given event and category'
+      params do
+        requires :event_id, type: Integer, desc: 'Event ID'
+        requires :category, type: String, desc: 'Ticket category (e.g. base, vip)'
+      end
+      get :price do
+        category = params[:category]
+        event_id = params[:event_id]
+
+        # Проверяем, что категория существует
+        unless Ticket.categories.key?(category)
+          error!({ error: "Unknown category: #{category}" }, 400)
+        end
+
+        # Проверяем, что event_id валидный
+        if event_id < 0
+          error!({ error: "Invalid event_id: #{event_id}" }, 400)
+        end
+
+        # Находим хотя бы один доступный билет для указанного event_id и category
+        ticket = Ticket.available_for_booking(event_id, category).first
+
+        # Если билетов нет, возвращаем ошибку
+        unless ticket
+          error!({ error: "No available tickets found for event_id: #{event_id} and category: #{category}" }, 404)
+        end
+
+        # Получаем базовую цену из найденного билета
+        base_price = ticket.base_price
+
+        # Вычисляем итоговую цену для билета
+        price = Ticket.price_for_category(event_id, category, base_price)
+
+        # Возвращаем результат
+        { category: category, price: price }
       end
   end
 end
