@@ -18,7 +18,9 @@ class Event < ApplicationRecord
     body = {
       event_id: self.id,
       base_tickets_count: self.base_tickets_amount,
-      vip_tickets_count: self.vip_tickets_amount
+      vip_tickets_count: self.vip_tickets_amount,
+      base_price: self.base_ticket_price,
+      vip_price: self.vip_ticket_price
     }.to_json
 
     # Отправка POST запроса в Ticket Service
