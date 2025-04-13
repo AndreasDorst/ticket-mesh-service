@@ -1,9 +1,15 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
-#
-# Example:
-#
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+require 'faker'
+
+puts "Seeding users..."
+
+10.times do
+  User.create!(
+    full_name: Faker::Name.name,
+    age: rand(18..65),
+    document_type: %w[passport id_card driver_license].sample,
+    document_number: Faker::IdNumber.valid,
+    password: 'password' # важно: bcrypt требует `has_secure_password`, так что пароль должен быть осмысленным
+  )
+end
+
+puts "✅ Done seeding users!"

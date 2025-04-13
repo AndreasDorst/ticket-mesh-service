@@ -4,6 +4,8 @@ Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
   # Make code changes take effect immediately without server restart.
+  config.hosts += ENV.fetch("RAILS_HOSTS", "").split(",")
+  
   config.enable_reloading = true
 
   # Do not eager load code on boot.
