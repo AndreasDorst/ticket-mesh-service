@@ -136,5 +136,56 @@ class Tickets < Grape::API
         # Возвращаем результат
         { category: category, price: price }
       end
+
+      desc 'Bulk create tickets for an event'
+      params do
+        requires :event_id, type: Integer, desc: 'Event ID'
+        requires :base_tickets_count, type: Integer, desc: 'Number of base tickets to create'
+        requires :vip_tickets_count, type: Integer, desc: 'Number of VIP tickets to create'
+        requires :base_price, type: BigDecimal, desc: 'Base ticket price'
+        requires :vip_price, type: BigDecimal, desc: 'VIP ticket price'
+      end
+      post :bulk_create do
+        event_id = params[:event_id]
+        base_count = params[:base_tickets_count]
+        vip_count = params[:vip_tickets_count]
+        base_price = params[:base_price]
+        vip_price = params[:vip_price]
+      
+        Ticket.transaction do
+          base_tickets = Array.new(base_count) do
+            {
+              event_id: event_id,
+              category: Ticket.categories[:base],
+              status: Ticket.statuses[:available],
+              base_price: base_price,
+              created_at: Time.current,
+              updated_at: Time.current
+            }
+          end
+      
+          vip_tickets = Array.new(vip_count) do
+            {
+              event_id: event_id,
+              category: Ticket.categories[:vip],
+              status: Ticket.statuses[:available],
+              base_price: vip_price,
+              created_at: Time.current,
+              updated_at: Time.current
+            }
+          end
+      
+          all_tickets = base_tickets + vip_tickets
+          Ticket.insert_all!(all_tickets)
+        end
+        
+        status 201
+        {
+          created: {
+            base: base_count,
+            vip: vip_count
+          }
+        }
+      end
   end
 end
