@@ -8,7 +8,7 @@ WORKDIR $APP_PATH
 COPY Gemfile* $APP_PATH/
 RUN bundle install -j4
 
-# COPY . .
+COPY . .
 
 EXPOSE 3000
 

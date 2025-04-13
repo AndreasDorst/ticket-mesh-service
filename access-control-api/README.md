@@ -16,10 +16,13 @@
 http://localhost:3000/api/
 ```
 
-| Метод | Путь             | Описание        | Параметры                    |
-|-------|------------------|-----------------|------------------------------|
-| POST  | /api/access/entry| Попытка входа   | ticket_id, document_number  |
-| POST  | /api/access/exit | Попытка выхода  | ticket_id                   |
+| Метод | Путь             | Описание        | Параметры                          |
+|-------|------------------|-----------------|------------------------------------|
+| POST  | /api/access/entry| Попытка входа   | ticket_id, document_number         |
+| POST  | /api/access/exit | Попытка выхода  | ticket_id                          |
+| GET   | /api/access/logs | Получение логов | type (entry/exit, optional),       |
+|       |                  |                 | status (entry/exit/fail, optional),|
+|       |                  |                 | date (YYYY-MM-DD, optional)        |
 
 ### POST /api/access/entry
 
@@ -37,6 +40,30 @@ http://localhost:3000/api/
 2. Проверка последней записи доступа
 3. Валидация наличия активного входа
 4. Создание записи выхода
+
+### GET /api/access_logs
+
+Возвращает список записей логов доступа с возможностью фильтрации.
+
+#### Параметры
+
+| Имя      | Тип      | Описание                                                       |
+|----------|---------|-----------------------------------------------------------------|
+| type     | String  | Фильтровать по типу события: `entry` (вход) или `exit` (выход). |
+| status   | String  | Фильтровать по статусу: `entry`, `exit` или `fail`.             |
+| date     | Date    | Фильтровать по дате в формате `YYYY-MM-DD`.                     |
+
+#### Использование
+
+##### Получение логов:
+
+```bash
+curl http://localhost:3000/api/access_logs
+```
+
+```
+curl http://localhost:3000/api/access_logs?type=entry
+```
 
 ## Использование API
 

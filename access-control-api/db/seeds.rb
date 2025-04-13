@@ -1,36 +1,53 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
-#
-# Example:
-#
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
-# db/seeds.rb
-
 require 'faker'
 
-# Очищаем существующие данные
 AccessLog.delete_all
 Ticket.delete_all
 
-# Создаем тестовые мероприятия
 event_id = 1
+event_start_time = Time.zone.local(2025, 4, 9, 19, 0, 0)
+event_end_time = event_start_time + 2.hours
 
-# Генерируем билеты
 tickets = []
-20.times do |i|
+50.times do |i|
   tickets << Ticket.create!(
     external_id: 1000 + i,
     event_id: event_id,
     full_name: Faker::Name.name,
     document_number: "AB#{rand(100000..999999)}",
-    category: rand(5) == 0 ? 'vip' : 'base', # 20% VIP билетов
-    created_at: 2.weeks.ago
+    category: rand(5) == 0 ? 'vip' : 'base',
+    created_at: 3.weeks.ago
   )
 end
 
 puts "Создано:"
 puts "- #{Ticket.count} билетов"
 puts "- #{Ticket.where(category: 'vip').count} VIP билетов"
+puts "- #{Ticket.where(category: 'base').count} обычных билетов"
+
+AccessLog.transaction do # Используем транзакцию для целостности данных
+  tickets.each do |ticket|
+    # Случайным образом решаем, был ли вход для этого билета
+    if rand < 0.8 # 80% билетов имеют запись о входе
+      entry_time = event_start_time + rand(event_end_time - event_start_time)
+      AccessLog.create!(
+        ticket: ticket,
+        status: 'entry',
+        check_time: entry_time
+      )
+      puts "- Создан лог входа для билета #{ticket.external_id} в #{entry_time.strftime('%H:%M')}"
+
+      # Случайным образом решаем, был ли выход (только если был вход)
+      if rand < 0.2 # 20% вошедших билетов имеют запись о выходе
+        exit_time = entry_time + rand((event_end_time + 1.hour) - entry_time)
+        AccessLog.create!(
+          ticket: ticket,
+          status: 'exit',
+          check_time: exit_time
+        )
+        puts "- Создан лог выхода для билета #{ticket.external_id} в #{exit_time.strftime('%H:%M')}"
+      end
+    end
+  end
+end
+
+puts "- Создано #{AccessLog.count} логов доступа"

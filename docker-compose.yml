@@ -1,0 +1,103 @@
+services:
+  # Access Control API
+  access-control:
+    build:
+      context: ./access-control-api
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    command: rails s -b 0.0.0.0
+    volumes:
+      - ./access-control-api:/usr/src
+    ports:
+      - "3000:3000"
+    depends_on:
+      - access-control-db
+      - redis
+    environment:
+      DATABASE_URL: postgres://user:password@access-control-db:5432/access_control_api
+      REDIS_URL: redis://redis:6379/0
+
+  access-control-sidekiq:
+    build:
+      context: ./access-control-api
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    command: sidekiq
+    volumes:
+      - ./access-control-api:/usr/src
+    depends_on:
+      - redis
+      - access-control-db
+    environment:
+      DATABASE_URL: postgres://user:password@access-control-db:5432/access_control_api
+      REDIS_URL: redis://redis:6379/0
+
+  # Ticket API
+  ticket-api:
+    build:
+      context: ./ticket-api
+    command: rails server -b 0.0.0.0
+    volumes:
+      - ./ticket-api:/usr/src
+    ports:
+      - "3001:3000"
+    depends_on:
+      - ticket-db
+    environment:
+      DATABASE_URL: postgres://user:password@ticket-db:5432/ticket_api
+
+  # Main API
+  main-api:
+    build:
+      context: ./main-api
+    command: rails server -b 0.0.0.0
+    volumes:
+      - ./main-api:/usr/src
+    ports:
+      - "3002:3000"
+    depends_on:
+      - main-db
+    environment:
+      DATABASE_URL: postgres://user:password@main-db:5432/main_api
+
+  # Databases
+  access-control-db:
+    image: postgres:11.5
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: access_control_api
+    volumes:
+      - access_control_postgres:/var/lib/postgresql/data
+
+  ticket-db:
+    image: postgres:11.5
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ticket_api
+    volumes:
+      - ticket_postgres:/var/lib/postgresql/data
+
+  main-db:
+    image: postgres:11.5
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: main_api
+    volumes:
+      - main_postgres:/var/lib/postgresql/data
+
+  # Redis
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+
+volumes:
+  access_control_postgres:
+  ticket_postgres:
+  main_postgres:
+  redis_data:
