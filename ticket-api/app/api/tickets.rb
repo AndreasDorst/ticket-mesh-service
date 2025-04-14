@@ -14,10 +14,11 @@ class Tickets < Grape::API
       event_id = params[:event_id]
       category = params[:category]
 
+      error!({ error: "Unknown category" }, 400) unless Ticket.categories.key?(category)
+      
       Ticket.transaction do
         # Ищем подходящий доступный билет
         ticket = Ticket.available_for_booking(event_id, category).first
-  
         error!({ error: 'No available tickets' }, 404) unless ticket
   
         if ticket.booking&.expired?
@@ -26,19 +27,16 @@ class Tickets < Grape::API
           error!({ error: 'Ticket was already booked' }, 400)
         end
 
-        time_to_book = 5.minutes.from_now
+        base_price = ticket.event.base_price
+        price = Ticket.price_for_category(event_id, category, base_price)
 
         # Создаем бронь для билета
         booking = Booking.create!(
           ticket: ticket,
-          expires_at: time_to_book
+          expires_at: Booking.default_expiration,
+          fixed_price: price
         )
 
-        # Получаем базовую цену из найденного билета
-        base_price = ticket.base_price
-
-        # Вычисляем итоговую цену для билета
-        price = Ticket.price_for_category(event_id, category, base_price)
   
         {
           reservation_id: booking.id,
@@ -53,16 +51,19 @@ class Tickets < Grape::API
       requires :id, type: Integer, desc: 'Ticket ID'
     end
     get 'info/:id' do
-      ticket = Ticket.find_by(id: params[:id])
-      
-      error!('Ticket not found', 404) unless ticket
+      ticket = Ticket.includes(purchase: :user).find_by(id: params[:id])
+      error!({ error: 'Ticket not found' }, 404) unless ticket
+    
       purchase = ticket.purchase
-      error!('Purchase not found', 404) unless purchase
-      
+      error!({ error: 'Purchase not found' }, 404) unless purchase
+    
+      user = purchase.user
+      error!({ error: 'User not found' }, 404) unless user
+    
       {
-        document_number: purchase.user_document,
+        document_number: user.document_number,
         event_id: ticket.event_id,
-        full_name: purchase.full_name,
+        full_name: user.full_name,
         category: ticket.category,
         status: ticket.status
       }
@@ -81,6 +82,10 @@ class Tickets < Grape::API
         error!({ error: 'Booking already expired' }, 400)
       end
 
+      if booking.ticket&.purchase.present?
+        error!({ error: 'Ticket has already been purchased and cannot be cancelled' }, 400)
+      end
+
       booking.destroy!
 
       { status: 'cancelled' }
@@ -92,13 +97,16 @@ class Tickets < Grape::API
       requires :document_number, type: String, desc: 'Violator\'s document'
     end
     post :block do
-      ticket = Ticket.find_by(id: params[:ticket_id])
-    
+      ticket = Ticket.includes(purchase: :user).find_by(id: params[:ticket_id])
       error!({ error: 'Ticket not found' }, 404) unless ticket
+
       purchase = ticket.purchase
       error!('Purchase not found', 404) unless purchase
+
+      user = purchase.user
+      error!({ error: 'User not found' }, 404) unless user
     
-      if purchase.user_document != params[:document_number]
+      if user.document_number != params[:document_number]
         error!({ error: 'Document does not match ticket holder' }, 403)
       end
     
@@ -125,10 +133,9 @@ class Tickets < Grape::API
         error!({ error: "Unknown category: #{category}" }, 400)
       end
 
-      # Проверяем, что event_id валидный
-      if event_id < 0
-        error!({ error: "Invalid event_id: #{event_id}" }, 400)
-      end
+      # Проверяем, что event_id валидный и существует в базе
+      event = Event.find_by(id: event_id)
+      error!({ error: "Invalid event_id: #{event_id}" }, 400) unless event
 
       # Находим хотя бы один доступный билет для указанного event_id и category
       ticket = Ticket.available_for_booking(event_id, category).first
@@ -138,8 +145,8 @@ class Tickets < Grape::API
         error!({ error: "No available tickets found for event_id: #{event_id} and category: #{category}" }, 404)
       end
 
-      # Получаем базовую цену из найденного билета
-      base_price = ticket.base_price
+      # Получаем базовую цену из найденного ивента
+      base_price = event.base_price
 
       # Вычисляем итоговую цену для билета
       price = Ticket.price_for_category(event_id, category, base_price)
@@ -164,31 +171,49 @@ class Tickets < Grape::API
       vip_price = params[:vip_price]
     
       Ticket.transaction do
+        # Ищем событие с таким ID, если не находим, создаем новое с этим ID
+        event = Event.find_by(id: event_id)
+        
+        unless event
+          begin
+            event = Event.create!(
+              id: event_id,
+              base_price: base_price,
+              vip_price: vip_price,
+              name: "Event ##{event_id}", # Пример наименование, можно изменить
+              date: Time.current # Пример, можно уточнить дату
+            )
+          rescue ActiveRecord::RecordInvalid => e
+            error!({ error: "Event creation failed: #{e.message}" }, 400)
+          end
+        end
+      
+        # Теперь создаем билеты
         base_tickets = Array.new(base_count) do
           {
             event_id: event_id,
             category: Ticket.categories[:base],
             status: Ticket.statuses[:available],
-            base_price: base_price,
             created_at: Time.current,
             updated_at: Time.current
           }
         end
-    
+      
         vip_tickets = Array.new(vip_count) do
           {
             event_id: event_id,
             category: Ticket.categories[:vip],
             status: Ticket.statuses[:available],
-            base_price: vip_price,
             created_at: Time.current,
             updated_at: Time.current
           }
         end
-    
+      
         all_tickets = base_tickets + vip_tickets
         Ticket.insert_all!(all_tickets)
       end
+
+      Rails.logger.info("Bulk creation of #{base_count} base tickets and #{vip_count} VIP tickets for event #{event_id}")
       
       status 201
       {
@@ -199,62 +224,56 @@ class Tickets < Grape::API
       }
     end
 
-    # TODO: тестовая функция - удалить
-    desc 'Get user (test)'
-    params do
-      requires :user_id, type: Integer, desc: 'User ID'
-    end
-    get :user do
-      user_id = params[:user_id]
-      user = get_user!(user_id)
-      present user
-    end
-
     desc 'Purchase a ticket by reservation_id and user_id'
     params do
       requires :reservation_id, type: Integer, desc: 'Reservation ID'
-      requires :user_id, type: String, desc: 'User ID'
+      requires :user_id, type: Integer, desc: 'User ID'
     end
     post :purchase do
       reservation_id = params[:reservation_id]
       user_id = params[:user_id]
-
-      # Находим бронь по reservation_id
+    
       booking = Booking.find_by(id: reservation_id)
-      
-      # Проверяем, что бронь существует и не просрочена
       error!({ error: 'Booking not found' }, 404) unless booking
       error!({ error: 'Booking has expired' }, 400) if booking.expired?
-
-      # Находим билет, связанный с бронированием
+    
       ticket = booking.ticket
-
-      # Проверяем, был ли билет уже куплен
+      price = booking.fixed_price
+    
       existing_purchase = ticket.purchase
       if existing_purchase
         error!({ error: 'Ticket has already been purchased' }, 400)
       end
-
-      user = get_user!(user_id) # все ошибки обработаны в get_user!
-
-      purchase = Purchase.new(
-        ticket: ticket,
-        user_id: user_id,
-        user_document: user['document_number'],
-        full_name: user['full_name']
-      )
-      
-      if purchase.save
-        { ticket_id: ticket.id }
-      else
-        error!({ error: 'Validation failed', details: purchase.errors.full_messages }, 400)
+    
+      user = User.find_by(id: user_id)
+    
+      unless user
+        remote_user = get_user!(user_id) # ← основной вызов main-api
+        # создаём локального юзера
+        begin
+          user = User.create!(
+            id: user_id,
+            full_name: remote_user['full_name'],
+            document_number: remote_user['document_number']
+          )
+        rescue ActiveRecord::RecordInvalid => e
+          error!({ error: 'Failed to save user locally', details: e.message }, 400)
+        end
       end
-
-      # Устанавливаем статус билета на купленный
-      ticket.sold!
-
-      # Возвращаем результат
-      { ticket_id: ticket.id }
+    
+      Purchase.transaction do
+        purchase = Purchase.new(
+          ticket: ticket,
+          user_id: user.id
+        )
+    
+        if purchase.save
+          ticket.sold!
+          { ticket_id: ticket.id, price: price }
+        else
+          error!({ error: 'Validation failed', details: purchase.errors.full_messages }, 400)
+        end
+      end
     end
   end
 end
