@@ -17,6 +17,8 @@ services:
     environment:
       DATABASE_URL: postgres://user:password@access-control-db:5432/access_control_api
       REDIS_URL: redis://redis:6379/0
+    env_file:
+      - .env
 
   access-control-sidekiq:
     build:
@@ -47,6 +49,8 @@ services:
       - ticket-db
     environment:
       DATABASE_URL: postgres://user:password@ticket-db:5432/ticket_api
+    env_file:
+      - .env
 
   # Main API
   main-api:
@@ -61,6 +65,8 @@ services:
       - main-db
     environment:
       DATABASE_URL: postgres://user:password@main-db:5432/main_api
+    env_file:
+      - .env
 
   # Databases
   access-control-db:
