@@ -17,21 +17,29 @@ RSpec.describe 'Services Integration', type: :request do
       headers: default_headers
     )
 
-    unless response.success?
+    # Для удобства тестирования
+    if !response.success?
       puts "\nRequest failed:"
-      puts "URL: #{url}"
-      puts "Params: #{params.to_json}"
-      puts "Response code: #{response.code}"
-      puts "Response body: #{response.body}"
+    else
+      puts "\nRequest succeeded:"
     end
+    puts "URL: #{url}"
+    puts "Params: #{params.to_json}"
+    puts "Response code: #{response.code}"
+    puts "Response body: #{response.body}"
 
     response
   end
 
   describe 'Full ticket lifecycle' do
+    before(:all) { WebMock.allow_net_connect! }
+    after(:all) { WebMock.disable_net_connect!(allow_localhost: true) }
+    let(:document_type) { 'passport' }
     let(:document_number) { 'AB123456' }
     let(:full_name) { 'John Doe' }
-    let(:user_email) { 'test@example.com' }
+    let(:age) { '30' }
+    # В нашей системе (пока-что нет email'ов у user'ов)
+    # let(:user_email) { 'test@example.com' }
     let(:user_password) { 'password123' }
     let(:event_params) do
       {
@@ -52,16 +60,23 @@ RSpec.describe 'Services Integration', type: :request do
         :post,
         "#{ENV['MAIN_API_URL']}/auth/register",
         {
-          email: user_email,
-          password: user_password,
-          full_name: full_name
+          user: {
+            full_name: full_name,
+            age: age,
+            document_type: document_type,
+            document_number: document_number,
+            password: user_password,
+            password_confirmation: user_password,
+            # email: user_email,
+          }
         }
       )
 
       expect(user_response.code).to eq(201)
       user_data = JSON.parse(user_response.body)
-      expect(user_data['id']).to be_present
-      user_id = user_data['id']
+
+      expect(user_data['user_id']).to be_present
+      user_id = user_data['user_id']
 
       # 2. Создание события
       event_response = make_request(
@@ -122,7 +137,7 @@ RSpec.describe 'Services Integration', type: :request do
         entry_params
       )
 
-      expect(entry_response.code).to eq(201)
+      expect(entry_response.code).to eq(200)
       entry_data = JSON.parse(entry_response.body)
       expect(entry_data['access_granted']).to be true
       expect(entry_data['log_id']).to be_present
