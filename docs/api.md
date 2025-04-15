@@ -153,7 +153,7 @@ curl -X POST http://localhost:3000/events \
 ### Забронировать билет
 
 ```bash
-curl -X POST http://localhost:3000/api/ticket/book \
+curl -X POST http://localhost:3001/api/ticket/book \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": 1,
@@ -166,6 +166,7 @@ curl -X POST http://localhost:3000/api/ticket/book \
 {
   "reservation_id": 15,
   "price": 1000.0,
+  "expires_at":"2025-04-15T19:18:14Z"
 }
 ```
 
@@ -195,7 +196,7 @@ curl -X POST http://localhost:3000/api/ticket/book \
 ### Получить информацию о билете
 
 ```bash
-curl http://localhost:3000/api/ticket/info/101
+curl http://localhost:3001/api/ticket/info/101
 ```
 
 🟢 **Успех:**
@@ -221,7 +222,7 @@ curl http://localhost:3000/api/ticket/info/101
 ### Отменить бронь
 
 ```bash
-curl -X DELETE http://localhost:3000/api/ticket/book/15
+curl -X DELETE http://localhost:3001/api/ticket/book/15
 ```
 
 🟢 **Успех:**
@@ -257,7 +258,7 @@ curl -X DELETE http://localhost:3000/api/ticket/book/15
 ### Заблокировать билет за нарушение
 
 ```bash
-curl -X POST http://localhost:3000/api/ticket/block \
+curl -X POST http://localhost:3001/api/ticket/block \
   -H "Content-Type: application/json" \
   -d '{
     "ticket_id": 101,
@@ -284,7 +285,7 @@ curl -X POST http://localhost:3000/api/ticket/block \
 ### Получить цену билета
 
 ```bash
-curl "http://localhost:3000/api/ticket/price?event_id=1&category=vip"
+curl "http://localhost:3001/api/ticket/price?event_id=1&category=vip"
 ```
 
 🟢 **Успех:**
@@ -299,10 +300,10 @@ curl "http://localhost:3000/api/ticket/price?event_id=1&category=vip"
 
 ---
 
-### Получить цену билета
+### Создать пачку билетов
 
 ```bash
-curl -X POST http://localhost:3000/api/ticket/bulk_create \
+curl -X POST http://localhost:3001/api/ticket/bulk_create \
   -H "Content-Type: application/json" \
   -d '{
     "event_id": 42,
@@ -332,10 +333,10 @@ curl -X POST http://localhost:3000/api/ticket/bulk_create \
 
 ---
 
-### Получить цену билета
+### Приобрести билет
 
 ```bash
-curl -X POST http://localhost:3000/api/ticket/purchase \
+curl -X POST http://localhost:3001/api/ticket/purchase \
   -H "Content-Type: application/json" \
   -d '{
     "reservation_id": 15,
