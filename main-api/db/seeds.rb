@@ -1,15 +1,17 @@
-require 'faker'
-
 puts "Seeding users..."
 
-10.times do
-  User.create!(
-    full_name: Faker::Name.name,
-    age: rand(18..65),
-    document_type: %w[passport id_card driver_license].sample,
-    document_number: Faker::IdNumber.valid,
-    password: 'password' # важно: bcrypt требует `has_secure_password`, так что пароль должен быть осмысленным
-  )
+users_data = [
+  { full_name: "Alice Johnson", age: 30, document_type: "passport", document_number: "AA123456", password: "password" },
+  { full_name: "Bob Smith", age: 42, document_type: "id_card", document_number: "ID789123", password: "password" },
+  { full_name: "Charlie Brown", age: 28, document_type: "driver_license", document_number: "DL456789", password: "password" },
+  { full_name: "Dana White", age: 35, document_type: "passport", document_number: "AA999999", password: "password" },
+  { full_name: "Eve Adams", age: 26, document_type: "passport", document_number: "AB555666", password: "password" }
+]
+
+User.delete_all
+
+users_data.each do |attrs|
+  User.create!(attrs)
 end
 
-puts "✅ Done seeding users!"
+puts "✅ Created #{User.count} users!"

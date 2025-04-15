@@ -1,5 +1,3 @@
-require 'faker'
-
 AccessLog.delete_all
 Ticket.delete_all
 
@@ -7,14 +5,22 @@ event_id = 1
 event_start_time = Time.zone.local(2025, 4, 9, 19, 0, 0)
 event_end_time = event_start_time + 2.hours
 
-tickets = []
-50.times do |i|
-  tickets << Ticket.create!(
-    external_id: 1000 + i,
+# Задаём фиксированные билеты — эти данные должны соответствовать ticket-api/main-api
+tickets_data = [
+  { external_id: 1, full_name: "Alice Johnson", document_number: "AA123456", category: "base" },
+  { external_id: 2, full_name: "Bob Smith", document_number: "ID789123", category: "vip" },
+  { external_id: 3, full_name: "Charlie Brown", document_number: "DL456789", category: "base" },
+  { external_id: 4, full_name: "Dana White", document_number: "AA999999", category: "vip" },
+  { external_id: 5, full_name: "Eve Adams", document_number: "AB555666", category: "base" }
+]
+
+tickets = tickets_data.map do |attrs|
+  Ticket.create!(
+    external_id: attrs[:external_id],
     event_id: event_id,
-    full_name: Faker::Name.name,
-    document_number: "AB#{rand(100000..999999)}",
-    category: rand(5) == 0 ? 'vip' : 'base',
+    full_name: attrs[:full_name],
+    document_number: attrs[:document_number],
+    category: attrs[:category],
     created_at: 3.weeks.ago
   )
 end
@@ -24,10 +30,10 @@ puts "- #{Ticket.count} билетов"
 puts "- #{Ticket.where(category: 'vip').count} VIP билетов"
 puts "- #{Ticket.where(category: 'base').count} обычных билетов"
 
-AccessLog.transaction do # Используем транзакцию для целостности данных
+# Добавим логи доступа (вход/выход)
+AccessLog.transaction do
   tickets.each do |ticket|
-    # Случайным образом решаем, был ли вход для этого билета
-    if rand < 0.8 # 80% билетов имеют запись о входе
+    if rand < 0.8  # 80% билетов с логом входа
       entry_time = event_start_time + rand(event_end_time - event_start_time)
       AccessLog.create!(
         ticket: ticket,
@@ -36,8 +42,7 @@ AccessLog.transaction do # Используем транзакцию для це
       )
       puts "- Создан лог входа для билета #{ticket.external_id} в #{entry_time.strftime('%H:%M')}"
 
-      # Случайным образом решаем, был ли выход (только если был вход)
-      if rand < 0.2 # 20% вошедших билетов имеют запись о выходе
+      if rand < 0.2  # 20% с логом выхода
         exit_time = entry_time + rand((event_end_time + 1.hour) - entry_time)
         AccessLog.create!(
           ticket: ticket,

@@ -11,7 +11,7 @@ module API
     helpers do
       def ticket_service
         @ticket_service ||= Faraday.new(
-          url: 'http://ticket-service',
+          url: MICROSERVICES::TICKET_SERVICE,
           headers: {'Content-Type' => 'application/json'}
         )
       end
@@ -31,7 +31,7 @@ module API
       end
 
       def verify_external_ticket(ticket_id, document_number)
-        response = ticket_service.get("/ticket/info/#{ticket_id}")
+        response = ticket_service.get("/api/ticket/info/#{ticket_id}")
         return nil unless response.success?
 
         ticket_data = JSON.parse(response.body)
@@ -79,7 +79,7 @@ module API
             check_time: Time.current
           )
         end
-
+        status 200
         { access_granted: true, log_id: log.id }
       end
 
@@ -98,7 +98,7 @@ module API
           status: 'exit',
           check_time: Time.current
         )
-
+        status 200
         { exit_registered: true, log_id: log.id }
       end
     end

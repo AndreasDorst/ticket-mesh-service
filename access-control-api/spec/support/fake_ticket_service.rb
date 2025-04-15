@@ -4,7 +4,7 @@ module FakeTicketService
   extend WebMock::API
 
   def self.stub_requests
-    stub_request(:get, %r{http://ticket-service/ticket/info/\d+}).to_return do |request|
+    stub_request(:get, %r{#{MICROSERVICES::TICKET_SERVICE}/api/ticket/info/\d+}).to_return do |request|
       ticket_id = request.uri.path.split('/').last
 
       case ticket_id
