@@ -49,4 +49,8 @@ RSpec.configure do |config|
   config.after(:all) do
     DatabaseCleaner.clean
   end
+
+  if Rails.env.test?
+    DatabaseCleaner.allow_remote_database_url = true
+  end
 end

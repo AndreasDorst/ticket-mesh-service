@@ -38,3 +38,14 @@ rebuild: build
 restart:
 	docker-compose down --remove-orphans
 	docker-compose up
+
+integration-tests: setup
+	@echo "🚀 Running integration tests..."
+	docker-compose run --rm main-api rspec ./spec/integration
+
+unit-tests:
+	@echo "🚀 Running unit tests..."
+	docker-compose run --rm main-api rspec ./spec/controllers
+	docker-compose run --rm -e RAILS_ENV=test access-control rspec ./spec/requests
+
+tests: integration-tests unit-tests

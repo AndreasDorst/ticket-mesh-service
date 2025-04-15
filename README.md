@@ -21,9 +21,12 @@
 | `make down`   | Останавливает все контейнеры и удаляет `orphan`-контейнеры    |
 | `make restart`    | Полный перезапуск: выключение + запуск    |
 | `make setup`  | Выполняет db: `drop`, `create`, `migrate`, `seed` для всех сервисов   |
-| `make ticket-api-db`  | Запускает команды БД только для `ticket-api`  |
-| `make main-api-db`    | Запускает команды БД только для `main-api`    |
-| `make access-control-db`  | Запускает команды БД только для `access-control`  |
+| `make ticket-api-db`  | Запускает setup только для `ticket-api`  |
+| `make main-api-db`    | Запускает setup только для `main-api`    |
+| `make access-control-db`  | Запускает setup только для `access-control`  |
+| `make tests`  | Выполняет все тесты  |
+| `make integration-tests`  | Выполняет только интеграционные тесты (⚠️ сервисы должны быть при этом запущены)  |
+| `make unit-tests`  | Выполняет только unit-тесты  |
 
 ## Использование (без Makefile)
 
