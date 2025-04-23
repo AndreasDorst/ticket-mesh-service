@@ -10,10 +10,7 @@ module API
 
     helpers do
       def ticket_service
-        @ticket_service ||= Faraday.new(
-          url: MICROSERVICES::TICKET_SERVICE,
-          headers: {'Content-Type' => 'application/json'}
-        )
+        @ticket_service ||= TicketService.new
       end
 
       def find_last_access(ticket)
@@ -31,14 +28,10 @@ module API
       end
 
       def verify_external_ticket(ticket_id, document_number)
-        response = ticket_service.get("/api/ticket/info/#{ticket_id}")
-        return nil unless response.success?
+        ticket_data = ticket_service.fetch_ticket_info(ticket_id)
+        return nil unless ticket_data && ticket_data['document_number'] == document_number
 
-        ticket_data = JSON.parse(response.body)
-        ticket_data if ticket_data['document_number'] == document_number
-      rescue => e
-        Rails.logger.error "Ticket verification failed: #{e}"
-        nil
+        ticket_data
       end
     end
 
@@ -91,15 +84,14 @@ module API
         ticket = Ticket.find_by(external_id: params[:ticket_id])
         error!('Ticket not found', 404) unless ticket
 
-        last_log = find_last_access(ticket)
-        error!('Not inside', 409) unless last_log && last_log.status == 'entry'
-
-        log = ticket.access_logs.create!(
-          status: 'exit',
-          check_time: Time.current
-        )
-        status 200
-        { exit_registered: true, log_id: log.id }
+        begin
+          service = ExitService.new(ticket)
+          log = service.process_exit
+          status 200
+          { exit_registered: true, log_id: log.id }
+        rescue StandardError => e
+          error!(e.message, 409)
+        end
       end
     end
 
@@ -111,20 +103,7 @@ module API
         optional :date, type: Date, desc: 'Filter by date (YYYY-MM-DD)'
       end
       get do
-        logs = AccessLog.joins(:ticket)
-
-        if params[:type]
-          logs = logs.where(access_logs: { status: params[:type] })
-        end
-
-        if params[:status]
-          logs = logs.where(access_logs: { status: params[:status] })
-        end
-
-        if params[:date]
-          logs = logs.where('DATE(access_logs.check_time) = ?', params[:date])
-        end
-
+        logs = AccessLogQuery.new(params).call
         present logs, with: Entities::AccessLog
       end
     end
