@@ -1,9 +1,25 @@
-require_relative '../workers/log_worker'
+require_relative '../workers/log_worker' 
+require_relative '../services/exceptions' 
+require_relative '../services/access_service'
+require_relative '../services/exit_service'
+require_relative '../services/ticket_service'
 
 module API
   class AccessLogs < Grape::API
     format :json
     prefix :api
+
+    helpers do
+      def ticket_service
+        @ticket_service ||= TicketService.new
+      end
+
+      def verify_external_ticket(ticket_id, document_number)
+        service = ticket_service
+        ticket_data = service.fetch_ticket_info(ticket_id)
+        ticket_data if ticket_data && ticket_data["document_number"] == document_number
+      end
+    end
 
     resource :access do
       desc 'Process entry attempt'
@@ -13,6 +29,7 @@ module API
       end
       post :entry do
         ticket = Ticket.find_by(external_id: params[:ticket_id].to_s)
+
         unless ticket
           ticket_data = verify_external_ticket(params[:ticket_id], params[:document_number])
           error!('Invalid credentials', 403) unless ticket_data
@@ -23,19 +40,21 @@ module API
           )
         end
 
-        last_log = ticket.access_logs.order(check_time: :desc).first
-        if last_log&.status == 'entry'
-          error!('Already inside', 409)
+        begin
+          AccessService.process_entry(ticket)
+
+          status 200
+          { access_granted: true }
+
+        rescue TicketAlreadyInsideError => e
+          error!(e.message, 409)
+        rescue ServiceError => e
+           Rails.logger.error "Known Service Error during entry processing: #{e.message}"
+           error!({ error: e.message }, 400)
+        rescue StandardError => e
+           Rails.logger.error "Unexpected error during entry processing: #{e.message}\n#{e.backtrace.join("\n")}"
+           error!({ error: 'Internal server error during entry processing' }, 500)
         end
-
-        AccessLogWorker.perform_async(
-          'ticket_id' => ticket.id,
-          'status' => 'entry',
-          'check_time' => Time.current.to_s
-        )
-
-        status 200
-        { access_granted: true }
       end
 
       desc 'Process exit attempt'
@@ -46,19 +65,21 @@ module API
         ticket = Ticket.find_by(external_id: params[:ticket_id].to_s)
         error!('Ticket not found', 404) unless ticket
 
-        last_log = ticket.access_logs.order(check_time: :desc).first
-        if !last_log || last_log.status != 'entry'
-          error!('Not inside', 409)
+        begin
+          ExitService.process_exit(ticket)
+
+          status 200
+          { exit_registered: true }
+
+        rescue TicketNotInsideError => e
+          error!(e.message, 409)
+        rescue ServiceError => e 
+           Rails.logger.error "Known Service Error during exit processing: #{e.message}"
+           error!({ error: e.message }, 400)
+        rescue StandardError => e
+           Rails.logger.error "Unexpected error during exit processing: #{e.message}\n#{e.backtrace.join("\n")}"
+           error!({ error: 'Internal server error during exit processing' }, 500)
         end
-
-        AccessLogWorker.perform_async(
-          'ticket_id' => ticket.id,
-          'status' => 'exit',
-          'check_time' => Time.current.to_s
-        )
-
-        status 200
-        { exit_registered: true }
       end
     end
 
