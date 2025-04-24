@@ -1,5 +1,5 @@
 require_relative '../workers/log_worker'
-require_relative 'eceptions'
+require_relative 'exceptions'
 
 class ExitService
   def self.process_exit(ticket)
