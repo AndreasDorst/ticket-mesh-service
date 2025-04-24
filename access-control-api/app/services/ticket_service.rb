@@ -1,5 +1,5 @@
 class TicketService
-  BASE_URL = ENV.fetch('TICKET_SERVICE_URL', 'http://localhost:3001')
+  BASE_URL = ENV.fetch('TICKET_SERVICE_URL', 'http://localhost:3000')
 
   def initialize
     @client = Faraday.new(url: BASE_URL)

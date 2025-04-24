@@ -1,5 +1,4 @@
 module UserHelper
-  # Функция уже обрабатывает возврат всех ошибок, оборачивать ее не надо
   def get_user!(user_id)
     begin
       user = MainApi::UserFetcher.call(user_id)

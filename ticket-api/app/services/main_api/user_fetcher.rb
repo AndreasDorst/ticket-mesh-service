@@ -1,4 +1,3 @@
-# ticket-api/app/services/main_api/user_fetcher.rb
 require 'net/http'
 require 'uri'
 require 'json'
