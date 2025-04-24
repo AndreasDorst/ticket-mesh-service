@@ -1,15 +1,9 @@
 FactoryBot.define do
   factory :ticket do
-    external_id { 123 }
-    document_number { 'AB123' }
-    category { 'base' }
+    sequence(:external_id) { |n| n.to_s }
+    document_number { "AB123" }
     event_id { 1 }
-    full_name { 'John Doe' }
-  end
-
-  factory :access_log do
-    ticket
-    status { 'entry' }
-    check_time { Time.current }
+    full_name { "John Doe" }
+    category { "vip" }
   end
 end
