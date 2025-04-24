@@ -1,4 +1,5 @@
 require_relative '../workers/log_worker'
+require_relative 'exceptions'
 
 class AccessService
   def self.process_entry(ticket)
